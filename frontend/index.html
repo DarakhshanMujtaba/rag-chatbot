@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RAG Chatbot</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c8fff'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M18 24a6 6 0 0 1 6-6h16a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H28l-8 6v-6a6 6 0 0 1-2-4.7V24z' fill='white' fill-opacity='.95'/%3E%3Ccircle cx='26' cy='28' r='2.2' fill='%237c8fff'/%3E%3Ccircle cx='32' cy='28' r='2.2' fill='%237c8fff'/%3E%3Ccircle cx='38' cy='28' r='2.2' fill='%237c8fff'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <span class="sidebar-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H13v16H5.5A1.5 1.5 0 0 1 4 18.5v-13z" fill="currentColor" opacity=".55"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H13v16h5.5c.83 0 1.5-.67 1.5-1.5v-13z" fill="currentColor"/></svg>
+          </span>
+          <h1>Knowledge Base</h1>
+        </div>
+        <p class="subtitle">Documents grounding this chatbot's answers</p>
+      </div>
+
+      <div id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" multiple accept=".pdf,.txt,.md" hidden />
+        <div class="dropzone-content">
+          <span class="dropzone-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 3v12m0-12 5 5m-5-5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>
+          <p><strong>Click to upload</strong> or drag &amp; drop</p>
+          <p class="dropzone-hint">PDF, TXT, or MD files</p>
+        </div>
+      </div>
+
+      <div class="doc-list-header">
+        <span>Indexed Documents</span>
+        <span id="docCount" class="doc-count">0</span>
+      </div>
+      <ul id="docList" class="doc-list">
+        <li class="doc-empty">
+          <span class="doc-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h6l2 2h5A2.5 2.5 0 0 1 22 8.5v9A2.5 2.5 0 0 1 19.5 20h-13A2.5 2.5 0 0 1 4 17.5v-11z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </span>
+          No documents yet — upload one to get started.
+        </li>
+      </ul>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <button id="sidebarToggle" class="icon-btn sidebar-toggle" aria-label="Toggle knowledge base" title="Toggle knowledge base">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <div class="brand">
+            <div class="brand-icon" aria-hidden="true">✨</div>
+            <div class="brand-text">
+              <h2>RAG Chatbot</h2>
+              <p class="chat-subtitle">Answers are grounded strictly in your uploaded documents.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-header-actions">
+          <div class="session-dropdown-wrap">
+            <button id="historyBtn" class="btn-ghost" title="Past chats">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M12 8v4l3 2M21 12a9 9 0 1 1-3-6.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="btn-ghost-label">History</span>
+            </button>
+            <div id="sessionDropdown" class="session-dropdown hidden">
+              <div class="session-dropdown-title">Past chats</div>
+              <ul id="sessionList" class="session-list"></ul>
+            </div>
+          </div>
+          <button id="newChatBtn" class="btn-primary">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            New Chat
+          </button>
+        </div>
+      </header>
+
+      <div id="chatWindow" class="chat-window"></div>
+
+      <form id="chatForm" class="chat-input-area">
+        <div class="input-shell">
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="Ask a question about your documents..."
+            autocomplete="off"
+          />
+          <button type="submit" id="sendBtn" class="send-btn" aria-label="Send message">
+            <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M4 12 20 4l-6 16-3-7-7-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+            <svg class="spinner-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="10"/></svg>
+          </button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
