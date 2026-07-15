@@ -26,7 +26,11 @@ from groq import Groq, APIStatusError, APIConnectionError, APITimeoutError
 # ---------------------------------------------------------------------------
 
 BACKEND_DIR = Path(__file__).resolve().parent
-CHROMA_PATH = BACKEND_DIR / "chroma_db"
+
+# DATA_DIR points at a mounted persistent disk in production (e.g. Render);
+# locally it's unset, so this falls back to the existing backend/ location.
+DATA_DIR = os.getenv("DATA_DIR")
+CHROMA_PATH = Path(DATA_DIR) / "chroma_db" if DATA_DIR else BACKEND_DIR / "chroma_db"
 COLLECTION_NAME = "documents"
 
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"

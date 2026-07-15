@@ -189,6 +189,41 @@ one account never shows or cites the other account's file.
 > manually back-fill `user_id` onto their existing metadata in
 > `backend/chroma_db/`.
 
+## Deploying to Render
+
+A `render.yaml` blueprint at the repo root deploys this as a single web
+service. Full walkthrough (creating the account, connecting GitHub, adding
+env vars, verifying the live deploy) is out of scope for this README — see
+the deployment conversation this was built from, or the summary below.
+
+**The short version:**
+1. Push this repo to GitHub (already done if you're reading this on GitHub).
+2. In the Render dashboard: New → Blueprint → connect this repo. Render
+   reads `render.yaml` and provisions a web service (`starter` plan) with a
+   1GB persistent disk mounted at `/var/data`.
+3. Add two environment variables in the dashboard (they're marked
+   `sync: false` in the blueprint, so Render prompts for them instead of
+   reading them from the file — they're never committed to git):
+   - `GROQ_API_KEY` — your Groq key
+   - `JWT_SECRET_KEY` — generate a **fresh** one for production, don't reuse
+     your local `.env` value (see below)
+4. Deploy. `users.db`, `chroma_db/`, and `uploads/` all live under the
+   mounted disk (via the `DATA_DIR` env var each of `database.py`,
+   `rag_engine.py`, and `main.py` read) so they survive restarts/redeploys.
+
+**Why a fresh `JWT_SECRET_KEY` for production:** the secret is what signs
+login tokens. If you reuse your local one, that's not unsafe by itself, but
+it does mean anyone who somehow got your local `.env` (e.g. an accidental
+commit, a shared machine) could mint valid tokens for your *production*
+users too. A separate secret per environment means a local leak only
+affects local, and a production leak only affects production.
+
+**Cost:** the free tier cannot attach a persistent disk at all — every
+restart (including the automatic spin-down after 15 minutes idle) wipes
+`users.db`/`chroma_db`/`uploads` completely, which defeats the point of a
+persistent multi-user demo. Cheapest tier that actually works: **Starter
+($7/mo) + a 1GB disk (~$0.25/mo) ≈ $7.25/month.**
+
 ## Project structure
 
 ```
@@ -213,6 +248,8 @@ rag-chatbot/
 ├── data/
 │   └── uploads/
 │       └── {user_id}/    # per-user uploaded source documents (gitignored)
+├── render.yaml           # Render Blueprint (web service + persistent disk)
+├── .python-version
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -251,21 +288,19 @@ not a production deployment. Specifically:
   to switch to `stream=True` and `main.py`'s `/api/chat` would need to return
   a `StreamingResponse`).
 - **Local disk storage only** — uploaded files and the ChromaDB index live on
-  the server's filesystem, so it won't work as-is on stateless/ephemeral
-  hosting (e.g. most serverless platforms) without moving to persistent disk
-  or S3 + a hosted vector DB.
+  the server's filesystem. `render.yaml` addresses this for Render specifically
+  (a mounted persistent disk via `DATA_DIR`), but the app still assumes a
+  single persistent filesystem — it won't work as-is on stateless/serverless
+  platforms without moving to S3 + a hosted vector DB.
 - **No file size/type validation beyond extension** — a malicious or huge
   file could still be uploaded and slow things down.
 - **No tests.**
 
-### To make this production-ready / deployable (e.g. Render, Railway)
+### To make this production-ready
 
 - Add refresh tokens (or short-lived access tokens + a revocation list) so a
   compromised token doesn't stay valid for a full week.
 - Add password reset and email verification flows.
-- Move uploads to persistent storage (Render/Railway disks, or S3) and pin
-  a persistent volume for `backend/chroma_db/` — without a persistent disk,
-  your index disappears on every redeploy.
 - Add rate limiting on `/api/chat` and `/api/upload`.
 - Add request size limits and stricter file validation (magic-byte checks,
   not just extension).

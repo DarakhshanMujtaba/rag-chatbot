@@ -1,0 +1,40 @@
+# Render Blueprint — see https://render.com/docs/blueprint-spec
+#
+# Deploys the FastAPI backend (which also serves the static frontend) as a
+# single web service. GROQ_API_KEY and JWT_SECRET_KEY are marked sync:false
+# so their real values live only in the Render dashboard, never in this
+# file or git.
+#
+# The persistent disk holds everything that must survive restarts/redeploys:
+# users.db (accounts), chroma_db/ (document embeddings), and uploads/ (the
+# original uploaded files) — see backend/database.py, rag_engine.py, and
+# main.py, which all read DATA_DIR to locate these under the disk's mount
+# path instead of their local dev locations.
+
+services:
+  - name: rag-chatbot
+    type: web
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DATA_DIR
+        value: /var/data
+      # Caches the sentence-transformers embedding model on the persistent
+      # disk so it's only downloaded from HuggingFace once, not on every
+      # redeploy (saves ~10-30s of cold-start latency after each deploy).
+      - key: HF_HOME
+        value: /var/data/hf_cache
+      - key: GROQ_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+    disk:
+      name: rag-chatbot-data
+      mountPath: /var/data
+      sizeGB: 1

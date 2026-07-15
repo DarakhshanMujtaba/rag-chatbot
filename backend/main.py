@@ -6,6 +6,7 @@ static frontend. Kept thin on purpose — all RAG logic lives in
 rag_engine.py and document_loader.py so this file only wires HTTP to it.
 """
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,7 +37,11 @@ Base.metadata.create_all(bind=engine)
 BACKEND_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_DIR.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-UPLOADS_DIR = PROJECT_ROOT / "data" / "uploads"
+
+# DATA_DIR points at a mounted persistent disk in production (e.g. Render);
+# locally it's unset, so this falls back to the existing data/uploads/ location.
+DATA_DIR = os.getenv("DATA_DIR")
+UPLOADS_DIR = Path(DATA_DIR) / "uploads" if DATA_DIR else PROJECT_ROOT / "data" / "uploads"
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
