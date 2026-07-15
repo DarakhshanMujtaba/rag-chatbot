@@ -83,7 +83,7 @@ async def signup(request: auth.SignupRequest, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="An account with this email already exists.")
     db.refresh(user)
-    return auth.TokenResponse(access_token=auth.create_access_token(user.id))
+    return auth.TokenResponse(access_token=auth.create_access_token(user.id, user.email))
 
 
 @app.post("/api/auth/login", response_model=auth.TokenResponse)
@@ -92,7 +92,7 @@ async def login(request: auth.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
     if user is None or not auth.verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
-    return auth.TokenResponse(access_token=auth.create_access_token(user.id))
+    return auth.TokenResponse(access_token=auth.create_access_token(user.id, user.email))
 
 
 # ---------------------------------------------------------------------------
@@ -212,15 +212,32 @@ async def chat_endpoint(request: ChatRequest, current_user: User = Depends(auth.
 # ---------------------------------------------------------------------------
 # Mounted after the /api routes so they take precedence. StaticFiles serves
 # style.css/app.js; the root path explicitly returns index.html.
+#
+# StaticFiles/FileResponse only set Last-Modified/ETag by default — no
+# Cache-Control — so without an explicit header, browsers are free to reuse
+# a stale copy of app.js/index.html from disk cache without even asking the
+# server, which silently hides frontend changes (e.g. a newly wired-up
+# button) behind an old cached script. `no-cache` forces a revalidation
+# request (cheap 304 if unchanged) on every load instead.
 
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+NO_CACHE_HEADERS = {"Cache-Control": "no-cache"}
+
+
+class NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static", NoCacheStaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 @app.get("/")
 async def serve_index():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    return FileResponse(str(FRONTEND_DIR / "index.html"), headers=NO_CACHE_HEADERS)
 
 
 @app.get("/login")
 async def serve_login():
-    return FileResponse(str(FRONTEND_DIR / "login.html"))
+    return FileResponse(str(FRONTEND_DIR / "login.html"), headers=NO_CACHE_HEADERS)

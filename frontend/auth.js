@@ -16,6 +16,14 @@ const authSubmit = document.getElementById("authSubmit");
 const authSubmitLabel = document.getElementById("authSubmitLabel");
 const authError = document.getElementById("authError");
 const passwordInput = document.getElementById("password");
+const togglePasswordBtn = document.getElementById("togglePassword");
+
+togglePasswordBtn.addEventListener("click", () => {
+  const isVisible = passwordInput.type === "text";
+  passwordInput.type = isVisible ? "password" : "text";
+  togglePasswordBtn.setAttribute("aria-pressed", String(!isVisible));
+  togglePasswordBtn.setAttribute("aria-label", isVisible ? "Show password" : "Hide password");
+});
 
 let mode = "login"; // "login" | "signup"
 

@@ -1,29 +1,5 @@
 :root {
-  /* Surfaces */
-  --bg: #0d0f14;
-  --bg-elevated: #14171f;
-  --bg-elevated-2: #1a1e29;
-  --bg-elevated-3: #232a3a;
-  --border: #262b3a;
-  --border-strong: #343c52;
-
-  /* Text */
-  --text: #eef0f6;
-  --text-muted: #9096ab;
-  --text-faint: #5b6178;
-
-  /* Accent */
-  --accent: #7c8fff;
-  --accent-2: #a78bfa;
-  --accent-hover: #6577f0;
-  --accent-gradient: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  --accent-soft: rgba(124, 143, 255, 0.12);
-
-  --danger: #ff6b6b;
-  --danger-soft: rgba(255, 107, 107, 0.12);
-  --success: #4ade80;
-
-  /* Spacing scale */
+  /* Shared, theme-independent tokens */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -32,26 +8,90 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Radius scale */
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-lg: 18px;
   --radius-pill: 999px;
 
-  /* Typography scale */
   --fs-xs: 11px;
   --fs-sm: 12.5px;
   --fs-base: 14px;
   --fs-md: 15px;
   --fs-lg: 17px;
-  --fs-xl: 20px;
+  --fs-xl: 21px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, Menlo, monospace;
 
   --sidebar-width: 300px;
+
+  /* Fixed ink used on the small file-type badges — those badges keep the
+     same light pastel backgrounds in both themes, so their text color
+     doesn't need to swap with the theme. */
+  --badge-ink: #241812;
+
+  /* --- Color tokens: dark theme is the default (also the no-JS/no-attribute
+     fallback), overridden below for [data-theme="light"]. --- */
+
+  --bg: #131118;
+  --bg-elevated: #1a1621;
+  --bg-elevated-2: #201a29;
+  --bg-elevated-3: #282032;
+  --border: #332a3d;
+  --border-strong: #453a54;
+
+  --text: #f0edf5;
+  --text-muted: #a89bb8;
+  --text-faint: #6f6380;
+
+  /* Accent — a single muted, deep violet. Not neon/saturated. */
+  --accent: #9481d1;
+  --accent-2: #6b4fa8;
+  --accent-hover: #a796dc;
+  --accent-gradient: linear-gradient(135deg, #a796dc 0%, #6b4fa8 100%);
+  --accent-soft: rgba(148, 129, 209, 0.15);
+  --accent-ink: #1a1420; /* text/icon color used on top of the accent */
+
+  --danger: #ff5470;
+  --danger-soft: rgba(255, 84, 112, 0.13);
+  --danger-ink: #ffd6dd;
+  --success: #7fc299;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.46);
+}
+
+:root[data-theme="light"] {
+  --bg: #faf8fc;
+  --bg-elevated: #f3eff8;
+  --bg-elevated-2: #ece5f3;
+  --bg-elevated-3: #e1d7ec;
+  --border: #ddd0e8;
+  --border-strong: #c3aad6;
+
+  --text: #221d2b;
+  --text-muted: #6b5e7d;
+  --text-faint: #948aa3;
+
+  /* Light mode needs a deeper, richer violet than dark mode so it doesn't
+     wash out against a light background. */
+  --accent: #6b46b3;
+  --accent-2: #54368f;
+  --accent-hover: #7c55c4;
+  --accent-gradient: linear-gradient(135deg, #7c55c4 0%, #54368f 100%);
+  --accent-soft: rgba(107, 70, 179, 0.1);
+  --accent-ink: #fbf8ff;
+
+  --danger: #d8355a;
+  --danger-soft: rgba(216, 53, 90, 0.1);
+  --danger-ink: #7a1230;
+  --success: #3f8f5f;
+
+  --shadow-sm: 0 1px 2px rgba(40, 20, 60, 0.08);
+  --shadow-md: 0 6px 20px rgba(40, 20, 60, 0.1);
+  --shadow-lg: 0 20px 48px rgba(40, 20, 60, 0.14);
 }
 
 * {
@@ -60,15 +100,35 @@
 
 body {
   margin: 0;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   height: 100vh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  position: relative;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-h1, h2, h3, p {
+/* A very faint film-grain texture over the whole app — the kind of detail
+   that reads as "someone considered this surface" instead of a flat fill. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+p {
   font-family: inherit;
 }
 
@@ -89,11 +149,11 @@ h1, h2, h3, p {
   flex-shrink: 0;
   background: var(--bg-elevated);
   border-right: 1px solid var(--border);
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-6) var(--space-4) var(--space-5);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .sidebar-title-row {
@@ -108,16 +168,16 @@ h1, h2, h3, p {
 }
 
 .sidebar-header h1 {
-  font-size: var(--fs-md);
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: 600;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .subtitle {
   font-size: var(--fs-sm);
   color: var(--text-muted);
-  margin: var(--space-1) 0 var(--space-5) 0;
+  margin: var(--space-2) 0 var(--space-6) 0;
 }
 
 .dropzone {
@@ -127,7 +187,7 @@ h1, h2, h3, p {
   text-align: center;
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .dropzone:hover {
@@ -172,10 +232,11 @@ h1, h2, h3, p {
   align-items: center;
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: var(--space-3);
   font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 .doc-count {
@@ -184,6 +245,7 @@ h1, h2, h3, p {
   padding: 2px 9px;
   font-size: var(--fs-xs);
   color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .doc-list {
@@ -222,7 +284,7 @@ h1, h2, h3, p {
   align-items: center;
   gap: var(--space-3);
   font-size: var(--fs-base);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, background-color 0.2s ease;
   animation: fade-in-up 0.3s ease both;
 }
 
@@ -240,13 +302,14 @@ h1, h2, h3, p {
   justify-content: center;
   font-size: 9.5px;
   font-weight: 800;
+  font-family: var(--font-mono);
   letter-spacing: 0.02em;
-  color: #0d0f14;
+  color: var(--badge-ink);
 }
 
-.doc-file-icon.pdf { background: linear-gradient(135deg, #ff8a8a, #ff6b6b); }
-.doc-file-icon.txt { background: linear-gradient(135deg, #a9b2c9, #8890a8); }
-.doc-file-icon.md  { background: linear-gradient(135deg, #b39dfd, #a78bfa); }
+.doc-file-icon.pdf { background: linear-gradient(135deg, #ff9376, #e8574a); }
+.doc-file-icon.txt { background: linear-gradient(135deg, #beb1a0, #94886f); }
+.doc-file-icon.md  { background: linear-gradient(135deg, #ddc36a, #b8963f); }
 
 .doc-item-info {
   min-width: 0;
@@ -257,13 +320,14 @@ h1, h2, h3, p {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 500;
+  font-weight: 600;
   font-size: var(--fs-sm);
 }
 
 .doc-item-meta {
   color: var(--text-muted);
   font-size: var(--fs-xs);
+  font-family: var(--font-mono);
   margin-top: 1px;
 }
 
@@ -312,6 +376,9 @@ h1, h2, h3, p {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  position: relative;
+  background: radial-gradient(480px circle at 8% -60%, var(--accent-soft), transparent 60%);
+  transition: border-color 0.2s ease;
 }
 
 .chat-header-left {
@@ -345,6 +412,54 @@ h1, h2, h3, p {
   display: none;
 }
 
+/* ---------- Theme toggle ---------- */
+
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  display: none;
+}
+
+/* Default (dark, or no attribute yet): show the sun — click to go light. */
+.theme-toggle .icon-sun {
+  display: flex;
+}
+
+:root[data-theme="light"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-toggle .icon-moon {
+  display: flex;
+}
+
+.auth-theme-toggle {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  z-index: 10;
+}
+
+/* ---------- User avatar ---------- */
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-gradient);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  user-select: none;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -357,12 +472,12 @@ h1, h2, h3, p {
   height: 38px;
   border-radius: var(--radius-md);
   background: var(--accent-gradient);
+  color: var(--accent-ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .brand-text {
@@ -371,13 +486,13 @@ h1, h2, h3, p {
 
 .chat-header h2 {
   margin: 0;
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .chat-subtitle {
-  margin: 1px 0 0 0;
+  margin: 2px 0 0 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
   white-space: nowrap;
@@ -402,8 +517,9 @@ h1, h2, h3, p {
   border-radius: var(--radius-md);
   padding: 0 var(--space-3);
   height: 34px;
+  font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
@@ -418,11 +534,12 @@ h1, h2, h3, p {
   align-items: center;
   gap: var(--space-2);
   background: var(--accent-gradient);
-  color: #0b0d14;
+  color: var(--accent-ink);
   border: none;
   border-radius: var(--radius-md);
   padding: 0 var(--space-4);
   height: 34px;
+  font-family: var(--font-body);
   font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
@@ -461,9 +578,10 @@ h1, h2, h3, p {
 .session-dropdown-title {
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   font-weight: 600;
+  font-family: var(--font-mono);
   padding: var(--space-2) var(--space-2) var(--space-2);
 }
 
@@ -517,6 +635,7 @@ h1, h2, h3, p {
 .session-item-time {
   font-size: var(--fs-xs);
   color: var(--text-faint);
+  font-family: var(--font-mono);
 }
 
 .session-item-delete {
@@ -542,10 +661,10 @@ h1, h2, h3, p {
 .chat-window {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-7);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .welcome-block {
@@ -567,6 +686,7 @@ h1, h2, h3, p {
   color: var(--text-muted);
   border-radius: var(--radius-pill);
   padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
   font-size: var(--fs-sm);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
@@ -620,7 +740,7 @@ h1, h2, h3, p {
 .bubble {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
-  line-height: 1.55;
+  line-height: 1.6;
   font-size: var(--fs-md);
   box-shadow: var(--shadow-sm);
   white-space: pre-wrap;
@@ -629,9 +749,9 @@ h1, h2, h3, p {
 
 .message.user .bubble {
   background: var(--accent-gradient);
-  color: #0d1020;
+  color: var(--accent-ink);
   border-bottom-right-radius: var(--radius-sm);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .message.bot .bubble {
@@ -643,7 +763,7 @@ h1, h2, h3, p {
 .message.bot .bubble.error-bubble {
   border-color: var(--danger);
   background: var(--danger-soft);
-  color: #ffd4d4;
+  color: var(--danger-ink);
 }
 
 .sources {
@@ -675,6 +795,7 @@ h1, h2, h3, p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
 .typing {
@@ -705,8 +826,9 @@ h1, h2, h3, p {
 }
 
 .chat-input-area {
-  padding: var(--space-4) var(--space-6) var(--space-5) var(--space-6);
+  padding: var(--space-4) var(--space-7) var(--space-6) var(--space-7);
   border-top: 1px solid var(--border);
+  transition: border-color 0.2s ease;
 }
 
 .input-shell {
@@ -717,7 +839,7 @@ h1, h2, h3, p {
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   padding: 6px 6px 6px var(--space-4);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
 }
 
 .input-shell:focus-within {
@@ -732,7 +854,7 @@ h1, h2, h3, p {
   padding: var(--space-2) 0;
   color: var(--text);
   font-size: var(--fs-md);
-  font-family: inherit;
+  font-family: var(--font-body);
   outline: none;
 }
 
@@ -746,13 +868,14 @@ h1, h2, h3, p {
 
 .send-btn {
   background: var(--accent-gradient);
-  color: #0d1020;
+  color: var(--accent-ink);
   border: none;
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
+  border-radius: 14px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   cursor: pointer;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: filter 0.15s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
@@ -762,7 +885,7 @@ h1, h2, h3, p {
 
 .send-btn:hover {
   filter: brightness(1.08);
-  transform: scale(1.04);
+  transform: scale(1.05) rotate(-6deg);
 }
 
 .send-btn:disabled {
@@ -824,12 +947,24 @@ h1, h2, h3, p {
 
 /* ---------- Scrollbars ---------- */
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
   border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 
 /* ---------- Responsive ---------- */

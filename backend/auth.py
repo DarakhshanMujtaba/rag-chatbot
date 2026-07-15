@@ -71,9 +71,12 @@ def verify_password(password: str, hashed_password: str) -> bool:
 # JWT
 # ---------------------------------------------------------------------------
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, email: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": str(user_id), "exp": expire}
+    # `email` is included purely for the frontend to display (e.g. an avatar
+    # initial) without an extra round trip — the backend never trusts it for
+    # authorization, that always goes through `sub` -> a fresh DB lookup.
+    payload = {"sub": str(user_id), "email": email, "exp": expire}
     return jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
 

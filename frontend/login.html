@@ -4,17 +4,30 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sign in — RAG Chatbot</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c8fff'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M18 24a6 6 0 0 1 6-6h16a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H28l-8 6v-6a6 6 0 0 1-2-4.7V24z' fill='white' fill-opacity='.95'/%3E%3Ccircle cx='26' cy='28' r='2.2' fill='%237c8fff'/%3E%3Ccircle cx='32' cy='28' r='2.2' fill='%237c8fff'/%3E%3Ccircle cx='38' cy='28' r='2.2' fill='%237c8fff'/%3E%3C/svg%3E" />
+<script>
+(function () {
+  var stored = localStorage.getItem("ragChatTheme");
+  var theme = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23131118'/%3E%3Cpath d='M32 5.3 L38.7 25.3 L58.7 32 L38.7 38.7 L32 58.7 L25.3 38.7 L5.3 32 L25.3 25.3 Z' fill='%239481D1'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;0,900;1,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/static/style.css" />
 <link rel="stylesheet" href="/static/auth.css" />
 </head>
 <body class="auth-body">
+  <button id="themeToggle" class="icon-btn theme-toggle auth-theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+    <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
+  </button>
   <div class="auth-shell">
     <div class="auth-brand">
-      <div class="brand-icon" aria-hidden="true">✨</div>
+      <div class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="currentColor"/></svg>
+      </div>
       <div class="brand-text">
         <h2>RAG Chatbot</h2>
         <p class="chat-subtitle">Answers grounded strictly in your uploaded documents.</p>
@@ -32,7 +45,13 @@
         <input class="auth-input" type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required />
 
         <label class="auth-label" for="password">Password</label>
-        <input class="auth-input" type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="8" />
+        <div class="password-field">
+          <input class="auth-input" type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="8" />
+          <button type="button" id="togglePassword" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <svg class="icon-eye" viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            <svg class="icon-eye-off" viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a13.16 13.16 0 0 1-3.22 3.94M6.61 6.61A13.16 13.16 0 0 0 1 12s4 7 11 7a10.94 10.94 0 0 0 4.24-.85" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
 
         <button type="submit" id="authSubmit" class="btn-primary auth-submit">
           <span id="authSubmitLabel">Log in</span>
@@ -43,6 +62,7 @@
     </div>
   </div>
 
+  <script src="/static/theme.js"></script>
   <script src="/static/auth.js"></script>
 </body>
 </html>

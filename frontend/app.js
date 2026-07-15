@@ -6,9 +6,6 @@
 
 const API_BASE = ""; // same-origin (FastAPI serves this file too)
 
-const SESSIONS_KEY = "ragChatSessions_v1";
-const ACTIVE_SESSION_KEY = "ragChatActiveSession_v1";
-const FILE_SIZES_KEY = "ragChatFileSizes_v1";
 const TOKEN_KEY = "ragChatToken";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +16,39 @@ const authToken = localStorage.getItem(TOKEN_KEY);
 if (!authToken) {
   window.location.href = "/login";
 }
+
+// Decodes a JWT's payload without verifying the signature — fine here since
+// it's only used to read our own token for display purposes (user id to
+// namespace localStorage, email for the avatar initial). Every actual
+// authorization decision still happens server-side against the real token.
+function parseJwt(token) {
+  try {
+    const payload = token.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+const tokenPayload = authToken ? parseJwt(authToken) : null;
+const currentUserId = tokenPayload?.sub || "anon";
+const currentUserEmail = tokenPayload?.email || "";
+
+// Chat sessions are scoped per-user (namespaced by the id embedded in the
+// JWT) — otherwise one browser logging into two different accounts would
+// show each user the previous account's chat history, since localStorage
+// isn't otherwise partitioned by who's logged in.
+const SESSIONS_KEY = `ragChatSessions_v1_${currentUserId}`;
+const ACTIVE_SESSION_KEY = `ragChatActiveSession_v1_${currentUserId}`;
+const FILE_SIZES_KEY = `ragChatFileSizes_v1_${currentUserId}`;
+
+// One-time cleanup: earlier versions of this app stored sessions under
+// unscoped keys shared by every account in the browser. Remove them so old
+// data from that bug can't leak into (or be read out of) any account.
+["ragChatSessions_v1", "ragChatActiveSession_v1", "ragChatFileSizes_v1"].forEach((key) =>
+  localStorage.removeItem(key)
+);
 
 function goToLogin() {
   localStorage.removeItem(TOKEN_KEY);
@@ -60,6 +90,12 @@ const newChatBtn = document.getElementById("newChatBtn");
 const historyBtn = document.getElementById("historyBtn");
 const sessionDropdown = document.getElementById("sessionDropdown");
 const sessionList = document.getElementById("sessionList");
+const userAvatar = document.getElementById("userAvatar");
+
+if (currentUserEmail) {
+  userAvatar.textContent = currentUserEmail.charAt(0).toUpperCase();
+  userAvatar.title = currentUserEmail;
+}
 
 // Conversation history sent to the backend so follow-up questions
 // ("what about section 2?") resolve correctly against prior turns.
