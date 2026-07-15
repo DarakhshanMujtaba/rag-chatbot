@@ -15,15 +15,23 @@ from dotenv import load_dotenv
 # regardless of import order).
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import Depends, FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from groq import APIStatusError, APIConnectionError, APITimeoutError
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
+import auth
 import document_loader
 import rag_engine
+from database import Base, engine, get_db
+from models import User
+
+# Creates users.db / the users table on first run; no-op if it already exists.
+Base.metadata.create_all(bind=engine)
 
 BACKEND_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_DIR.parent
@@ -61,13 +69,45 @@ class ChatRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@app.post("/api/auth/signup", response_model=auth.TokenResponse)
+async def signup(request: auth.SignupRequest, db: Session = Depends(get_db)):
+    """Create a new user account and return an access token, logged in."""
+    user = User(email=request.email, hashed_password=auth.hash_password(request.password))
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+    db.refresh(user)
+    return auth.TokenResponse(access_token=auth.create_access_token(user.id))
+
+
+@app.post("/api/auth/login", response_model=auth.TokenResponse)
+async def login(request: auth.LoginRequest, db: Session = Depends(get_db)):
+    """Verify credentials and return an access token."""
+    user = db.query(User).filter(User.email == request.email).first()
+    if user is None or not auth.verify_password(request.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password.")
+    return auth.TokenResponse(access_token=auth.create_access_token(user.id))
+
+
+# ---------------------------------------------------------------------------
 # API routes
 # ---------------------------------------------------------------------------
 
 @app.post("/api/upload")
-async def upload_documents(files: list[UploadFile] = File(...)):
+async def upload_documents(
+    files: list[UploadFile] = File(...),
+    current_user: User = Depends(auth.get_current_user),
+):
     """Save uploaded files, parse them, chunk + embed + index each one."""
     results = []
+    user_upload_dir = UPLOADS_DIR / str(current_user.id)
+    user_upload_dir.mkdir(parents=True, exist_ok=True)
 
     for upload in files:
         filename = upload.filename
@@ -79,7 +119,7 @@ async def upload_documents(files: list[UploadFile] = File(...)):
             })
             continue
 
-        dest_path = UPLOADS_DIR / filename
+        dest_path = user_upload_dir / filename
         try:
             contents = await upload.read()
             dest_path.write_bytes(contents)
@@ -93,7 +133,7 @@ async def upload_documents(files: list[UploadFile] = File(...)):
                 })
                 continue
 
-            chunk_count = rag_engine.add_document(filename, text)
+            chunk_count = rag_engine.add_document(filename, text, current_user.id)
             results.append({
                 "filename": filename,
                 "status": "indexed",
@@ -110,19 +150,19 @@ async def upload_documents(files: list[UploadFile] = File(...)):
 
 
 @app.get("/api/documents")
-async def get_documents():
-    """List documents currently in the vector store."""
-    return {"documents": rag_engine.list_documents()}
+async def get_documents(current_user: User = Depends(auth.get_current_user)):
+    """List documents currently in the vector store, scoped to the current user."""
+    return {"documents": rag_engine.list_documents(current_user.id)}
 
 
 @app.delete("/api/documents/{filename}")
-async def delete_document(filename: str):
-    """Remove a document's vectors from the store and its file from disk."""
-    removed = rag_engine.delete_document(filename)
+async def delete_document(filename: str, current_user: User = Depends(auth.get_current_user)):
+    """Remove one of the current user's documents (vectors + file on disk)."""
+    removed = rag_engine.delete_document(filename, current_user.id)
     if removed == 0:
         raise HTTPException(status_code=404, detail=f"'{filename}' not found in index.")
 
-    file_path = UPLOADS_DIR / filename
+    file_path = UPLOADS_DIR / str(current_user.id) / filename
     if file_path.exists():
         file_path.unlink()
 
@@ -130,12 +170,12 @@ async def delete_document(filename: str):
 
 
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, current_user: User = Depends(auth.get_current_user)):
     """Run one RAG turn: retrieve context, call Groq, return grounded answer."""
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
-    docs = rag_engine.list_documents()
+    docs = rag_engine.list_documents(current_user.id)
     if not docs:
         return JSONResponse(
             status_code=200,
@@ -148,7 +188,7 @@ async def chat_endpoint(request: ChatRequest):
 
     try:
         history = [turn.model_dump() for turn in request.history]
-        result = rag_engine.chat(request.message, history)
+        result = rag_engine.chat(request.message, history, current_user.id)
         return result
     except RuntimeError as e:
         # Raised by rag_engine when GROQ_API_KEY is missing.
@@ -179,3 +219,8 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 @app.get("/")
 async def serve_index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
+@app.get("/login")
+async def serve_login():
+    return FileResponse(str(FRONTEND_DIR / "login.html"))

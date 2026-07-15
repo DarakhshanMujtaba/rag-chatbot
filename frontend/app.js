@@ -9,6 +9,33 @@ const API_BASE = ""; // same-origin (FastAPI serves this file too)
 const SESSIONS_KEY = "ragChatSessions_v1";
 const ACTIVE_SESSION_KEY = "ragChatActiveSession_v1";
 const FILE_SIZES_KEY = "ragChatFileSizes_v1";
+const TOKEN_KEY = "ragChatToken";
+
+// ---------------------------------------------------------------------------
+// Auth guard + authenticated fetch
+// ---------------------------------------------------------------------------
+
+const authToken = localStorage.getItem(TOKEN_KEY);
+if (!authToken) {
+  window.location.href = "/login";
+}
+
+function goToLogin() {
+  localStorage.removeItem(TOKEN_KEY);
+  window.location.href = "/login";
+}
+
+// Wraps fetch with the Authorization header and redirects to login if the
+// token is missing/invalid/expired (401) or rejected outright (403).
+async function authFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}), Authorization: `Bearer ${authToken}` };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401 || res.status === 403) {
+    goToLogin();
+    throw new Error("Session expired. Redirecting to login…");
+  }
+  return res;
+}
 
 const SUGGESTIONS = [
   "What is this document about?",
@@ -109,7 +136,7 @@ function fileIconHtml(filename) {
 
 async function refreshDocuments() {
   try {
-    const res = await fetch(`${API_BASE}/api/documents`);
+    const res = await authFetch(`${API_BASE}/api/documents`);
     const data = await res.json();
     renderDocuments(data.documents || []);
   } catch (err) {
@@ -158,7 +185,7 @@ function renderDocuments(documents) {
 
 async function deleteDocument(filename) {
   try {
-    const res = await fetch(`${API_BASE}/api/documents/${encodeURIComponent(filename)}`, {
+    const res = await authFetch(`${API_BASE}/api/documents/${encodeURIComponent(filename)}`, {
       method: "DELETE",
     });
     if (!res.ok) {
@@ -188,7 +215,7 @@ async function uploadFiles(fileList) {
   showToast(`Uploading ${fileList.length} file(s)...`);
 
   try {
-    const res = await fetch(`${API_BASE}/api/upload`, {
+    const res = await authFetch(`${API_BASE}/api/upload`, {
       method: "POST",
       body: formData,
     });
@@ -380,6 +407,8 @@ function startNewChat() {
 
 newChatBtn.addEventListener("click", startNewChat);
 
+document.getElementById("logoutBtn").addEventListener("click", goToLogin);
+
 function initSessions() {
   const sessions = loadSessions();
   const savedActiveId = localStorage.getItem(ACTIVE_SESSION_KEY);
@@ -504,7 +533,7 @@ async function sendMessage(text) {
   appendTypingIndicator();
 
   try {
-    const res = await fetch(`${API_BASE}/api/chat`, {
+    const res = await authFetch(`${API_BASE}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text, history }),
@@ -555,5 +584,7 @@ function escapeHtml(str) {
 // Init
 // ---------------------------------------------------------------------------
 
-refreshDocuments();
-initSessions();
+if (authToken) {
+  refreshDocuments();
+  initSessions();
+}

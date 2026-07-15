@@ -1,0 +1,134 @@
+/* auth.css — login/signup page, layered on top of style.css's theme variables */
+
+.auth-body {
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+  text-align: left;
+}
+
+.auth-brand .brand-icon {
+  font-size: 28px;
+}
+
+.auth-brand h2 {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  margin: 0;
+}
+
+.auth-brand .chat-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+}
+
+.auth-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-5);
+  box-shadow: var(--shadow-md);
+}
+
+.auth-tabs {
+  display: flex;
+  background: var(--bg-elevated-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  margin-bottom: var(--space-5);
+}
+
+.auth-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.auth-tab.active {
+  background: var(--bg-elevated-3);
+  color: var(--text);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auth-label {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: var(--space-2);
+}
+
+.auth-input {
+  background: var(--bg-elevated-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-base);
+  padding: 0 var(--space-3);
+  height: 40px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.auth-input:focus {
+  border-color: var(--accent);
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  height: 40px;
+  margin-top: var(--space-4);
+  font-size: var(--fs-base);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.auth-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+  margin: var(--space-3) 0 0 0;
+}
+
+.auth-error.hidden {
+  display: none;
+}

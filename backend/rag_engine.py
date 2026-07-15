@@ -133,9 +133,10 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE_WORDS,
 # Indexing
 # ---------------------------------------------------------------------------
 
-def add_document(filename: str, text: str) -> int:
+def add_document(filename: str, text: str, user_id: int) -> int:
     """
-    Chunk, embed, and store a document's text in ChromaDB.
+    Chunk, embed, and store a document's text in ChromaDB, tagged with the
+    owning user's id so retrieval/listing/deletion can be scoped per user.
     Returns the number of chunks stored.
     """
     chunks = chunk_text(text)
@@ -145,18 +146,20 @@ def add_document(filename: str, text: str) -> int:
     model = get_embedding_model()
     embeddings = model.encode(chunks, show_progress_bar=False).tolist()
 
-    ids = [f"{filename}::{uuid.uuid4().hex[:8]}::{i}" for i in range(len(chunks))]
-    metadatas = [{"source": filename, "chunk_index": i} for i in range(len(chunks))]
+    ids = [f"{user_id}::{filename}::{uuid.uuid4().hex[:8]}::{i}" for i in range(len(chunks))]
+    metadatas = [
+        {"source": filename, "chunk_index": i, "user_id": user_id} for i in range(len(chunks))
+    ]
 
     collection = get_collection()
     collection.add(ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadatas)
     return len(chunks)
 
 
-def list_documents() -> list[dict]:
-    """Return each indexed source filename with its chunk count."""
+def list_documents(user_id: int) -> list[dict]:
+    """Return the given user's indexed source filenames with chunk counts."""
     collection = get_collection()
-    data = collection.get(include=["metadatas"])
+    data = collection.get(where={"user_id": user_id}, include=["metadatas"])
     counts: dict[str, int] = {}
     for meta in data["metadatas"]:
         source = meta["source"]
@@ -164,10 +167,13 @@ def list_documents() -> list[dict]:
     return [{"filename": name, "chunks": count} for name, count in sorted(counts.items())]
 
 
-def delete_document(filename: str) -> int:
-    """Remove all chunks belonging to a source file. Returns count removed."""
+def delete_document(filename: str, user_id: int) -> int:
+    """Remove all chunks belonging to a source file owned by this user.
+    Returns count removed."""
     collection = get_collection()
-    existing = collection.get(where={"source": filename}, include=[])
+    existing = collection.get(
+        where={"$and": [{"source": filename}, {"user_id": user_id}]}, include=[]
+    )
     ids = existing["ids"]
     if ids:
         collection.delete(ids=ids)
@@ -178,10 +184,12 @@ def delete_document(filename: str) -> int:
 # Retrieval + generation
 # ---------------------------------------------------------------------------
 
-def retrieve(query: str, k: int = TOP_K) -> list[dict]:
-    """Embed the query and fetch the k most relevant chunks from Chroma."""
+def retrieve(query: str, user_id: int, k: int = TOP_K) -> list[dict]:
+    """Embed the query and fetch the k most relevant chunks from Chroma,
+    scoped to the given user's own documents."""
     collection = get_collection()
-    if collection.count() == 0:
+    user_chunk_count = len(collection.get(where={"user_id": user_id}, include=[])["ids"])
+    if user_chunk_count == 0:
         return []
 
     model = get_embedding_model()
@@ -189,7 +197,8 @@ def retrieve(query: str, k: int = TOP_K) -> list[dict]:
 
     results = collection.query(
         query_embeddings=query_embedding,
-        n_results=min(k, collection.count()),
+        n_results=min(k, user_chunk_count),
+        where={"user_id": user_id},
         include=["documents", "metadatas", "distances"],
     )
 
@@ -268,12 +277,13 @@ def _call_groq(messages: list[dict]) -> tuple[str, str]:
     raise RuntimeError("Groq API is unavailable for both primary and fallback models.")
 
 
-def chat(query: str, history: list[dict]) -> dict:
+def chat(query: str, history: list[dict], user_id: int) -> dict:
     """
-    Full RAG turn: retrieve relevant chunks, build a grounded prompt,
-    call Groq, and return the answer along with which sources were used.
+    Full RAG turn: retrieve relevant chunks (scoped to this user's own
+    documents), build a grounded prompt, call Groq, and return the answer
+    along with which sources were used.
     """
-    hits = retrieve(query, k=TOP_K)
+    hits = retrieve(query, user_id, k=TOP_K)
     messages = _build_messages(query, history, hits)
     answer, model_used = _call_groq(messages)
 

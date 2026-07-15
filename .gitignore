@@ -5,6 +5,9 @@
 backend/chroma_db/
 data/uploads/
 
+# User account database
+backend/users.db
+
 # Python
 __pycache__/
 *.pyc
